@@ -9,7 +9,7 @@ This is the official code base for [SD-HuBERT: Sentence-Level Self-Distillation 
 1. We recommend to set up a conda environment. We trained/tested the model on Python 3.9.
 ```
 conda create -n sdhubert python=3.9
-conda activate rnnt
+conda activate sdhubert
 ```
 2. Please install a working version of PyTorch which fits your computing resources (tested on torch=1.13.1, CUDA==11.7, Linux).
 3. Then install dependency packages through `pip install -r requirements.txt`.
@@ -35,7 +35,7 @@ wav_file = WAV_FILE
 outputs = mincut(**segmenter(wav_file))
 ```
 
-The output should look like
+The output has following format.
 ```
 {'segments': array of boundaries,
  'features': original feature of frames,
