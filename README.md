@@ -1,7 +1,7 @@
 # SD-HuBERT: Sentence-Level Self-Distillation Induces Syllabic Organization In HuBERT
 
+This is the official code base for [SD-HuBERT: Sentence-Level Self-Distillation Induces Syllabic Organization In HuBERT](https://arxiv.org/abs/2310.10803).
 
-In [this paper](https://arxiv.org/abs/2310.10803), we demonstrate that a syllabic organization emerges in learning sentence-level representation of speech. In particular, we adopt "self-distillation" objective to fine-tune the pretrained HuBERT with an aggregator token that summarizes the entire sentence. Without any supervision, the resulting model draws definite boundaries in speech, and the representations across frames show salient syllabic structures. We demonstrate that this emergent structure largely corresponds to the ground truth syllables. Furthermore, we propose a new benchmark task, Spoken Speech ABX, for evaluating sentence-level representation of speech. When compared to previous models, our model outperforms in both unsupervised syllable discovery and learning sentence-level representation. Together, we demonstrate that the self-distillation of HuBERT gives rise to syllabic organization without relying on external labels or modalities, and potentially provides novel data-driven units for spoken language modeling. 
 ![SD-HuBERT](figures/main_figure.jpg)
 
 ## Environment
