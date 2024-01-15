@@ -1,0 +1,10 @@
+km_models
+.ipynb_checkpoints
+**/*/.ipynb_checkpoints
+*/.ipynb_checkpoints
+*/__pycache__
+outputs
+*/_deprecated
+ckpts*
+debugging_notebooks
+

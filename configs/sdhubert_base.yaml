@@ -1,0 +1,26 @@
+name: sdhubert_base
+model:
+  speech_upstream: facebook/hubert-base-ls960
+  reinit_layers: [9,10,11]
+  ema_decay: 0.999
+  final_dim: 2048
+  freeze_extractor: true
+  freeze_pos_embedding: true
+  center_momentum: 0.9
+  perturb_teacher: true
+  gamma: 0.1
+  lr: 0.0001
+  T_max: 200000
+  loss_coefs:
+    distill_loss: 1
+data:
+  root_dir: '/data/common/LibriSpeech'
+  batch_size: 100
+  num_workers: 1
+  sample_len: 5.01
+checkpoint_epoch: 1
+max_steps: 200000
+limit_val_batches: 5
+resume_ckpt: null 
+check_val_every_n_epoch: 50
+gpus: '0,1'
