@@ -1,24 +1,28 @@
 #from model.sdhubert import XModel
-from model_v7 import SAggModel
-from utils.utils import load_model
+from utils.misc import load_model
 from utils.ssabx import SSABXEvaluator
 import soundfile as sf
 from transformers import Wav2Vec2Processor
 import argparse
 import torch
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--ckpt_path", type=str, default='ckpts/sdhubert_base.pt')
+parser.add_argument("--layer", type=int, default=9)
+parser.add_argument("--mode", type=str, default='favg')
+parser.add_argument("--device", type=str, default='cuda:0')
+parser.add_argument("--librispeech_dataroot", type=str, default='/data/common/LibriSpeech')
+parser.add_argument("--ssabx_triplets", type=str, default='files/ssabx.json')
+
 class SentembWrapper(object):
-    def __init__(self, output_path, layer=8, mode='latest', device='cuda'):
+    def __init__(self, model, layer=9, mode='favg', device='cuda'):
         '''
-            output_path: path created by torch lightning
-            mode: if 'latest' load the latest epoch result, if 'best' load the best val_loss ckpt
         '''
-        
-        model,cfg = load_model(output_path, SAggModel, mode=mode,verbose=True)
-        self.model = model.net.eval().to(device)
+        self.model = model.eval().to(device)
         self.device = device
         self.processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
         self.layer = layer
+        self.mode = mode
         
         
     def __call__(self, wav):
@@ -29,23 +33,27 @@ class SentembWrapper(object):
         wav_input = wav_input.input_values.detach().to(self.device)
         
         with torch.no_grad():
-            states, att = self.model.encode(wav_input)
-            cls_token = self.model.final_lin(self.model.final_proj(states[-1][:,0,:]))
+            outputs = self.model(wav_input, inference_mode=True)
+            cls_token = outputs['cls']
+            states = outputs['hidden_states']
             
-        
-            
-        #sentemb = states[self.layer][0,0].detach().cpu().numpy()
-        sentemb = states[self.layer][0,1:].mean(0).detach().cpu().numpy()
-        #sentemb = cls_token[0].detach().cpu().numpy()
+        if self.mode =='favg':
+            sentemb = states[self.layer][0,1:].mean(0).detach().cpu().numpy()
+        elif self.mode == 'agg':
+            if self.layer != 'final':
+                sentemb = states[self.layer][0,0].detach().cpu().numpy()
+            else:
+                sentemb = cls_token[0].detach().cpu().numpy()
+        else:
+            raise NotImplementedError
         return sentemb
     
     
 
 if __name__ == '__main__':
-    output_path = '{OUTPUT_DIR}/{DATE}/{TIME}/{EXP_NAME}' # created by torch-lightning
-    model = SentembWrapper(output_path)
-    librispeech_dataroot= '/data/common/LibriSpeech'
-    ssabx_triplets='files/ssabx.json'
-    ssabx=SSABXEvaluator(librispeech_dataroot, ssabx_triplets, model)
+    args = parser.parse_args()
+    model,_ = load_model(args.ckpt_path)
+    sentemb_extractor = SentembWrapper(model, layer=args.layer, mode=args.mode, device=args.device)
+    ssabx=SSABXEvaluator(args.librispeech_dataroot, args.ssabx_triplets, sentemb_extractor)
     acc = ssabx.evaluate()
-    print(f'ACC: {acc}')
+    print(f'SSABX ACC: {acc}')

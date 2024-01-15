@@ -6,8 +6,9 @@ from pathlib import Path
 import json 
 import random
 import tqdm
+from scipy.optimize import linear_sum_assignment
 
-def find_boundary_matches(gt, pred, tolerance):
+def match_boundary(gt, pred, tolerance):
     """
     gt: list of ground truth boundaries
     pred: list of predicted boundaries
@@ -49,9 +50,9 @@ def r_value(r1, r2):
 
 class BoundaryDetectionEvaluator(object):
     
-    def __init__(self, librispeech_dataroot, output_name, test_syllables, val_syllables, tolerance=0.05,
+    def __init__(self, segment_path, test_syllables, val_syllables, tolerance=0.05,
                 max_val_num = 500):
-        self.dataroot = Path(librispeech_dataroot)/output_name
+        self.dataroot = Path(segment_path)
         self.test_syllables = json.load(open(test_syllables,'r'))
         self.val_syllables = json.load(open(val_syllables,'r'))
         self.tolerance = tolerance
@@ -64,7 +65,6 @@ class BoundaryDetectionEvaluator(object):
             val_keys.sort()
             self.val_syllables = {key:self.val_syllables[key] in val_keys}
         
-    
     def _find_best_shift(self):
         best_shift = -999
         best_r_val = -999
@@ -105,7 +105,7 @@ class BoundaryDetectionEvaluator(object):
             gt_boundaries.sort()
             pred_boundaries = np.unique(pred_segments[:,0])
             pred_boundaries.sort()
-            match_gt, match_pred, gt_len, pred_len = find_boundary_matches(gt_boundaries,
+            match_gt, match_pred, gt_len, pred_len = match_boundary(gt_boundaries,
                                                                            pred_boundaries,
                                                                            self.tolerance)
             results['match_gt'] += match_gt
@@ -125,4 +125,32 @@ class BoundaryDetectionEvaluator(object):
     
             
             
+def temporal_iou_mat(bd,aln):
+    bd_exp=np.repeat(bd[:,None,:],len(aln),axis=1)
+    aln_exp=np.repeat(aln[None,:,:],len(bd),axis=0)
+    start_mat =np.concatenate([bd_exp[:,:,0:1],aln_exp[:,:,0:1]],-1)
+    end_mat =np.concatenate([bd_exp[:,:,1:],aln_exp[:,:,1:]],-1)
+
+    inter_mat = end_mat.min(-1)-start_mat.max(-1)
+    union_mat = end_mat.max(-1)-start_mat.min(-1)
+    iou_mat = inter_mat/(union_mat+0.0001)
+    return iou_mat
+
+def match_cluster(gt_segments, pred_segments):
+    iou_mat = temporal_iou_mat(gt_segments, pred_segments)
+    gt_idxs, pred_idxs = linear_sum_assignment(iou_mat, maximize=True)
+    return gt_idxs, pred_idxs
+
+def trim_label(label):
+    return label.replace('0','').replace('1','').replace('2','').replace('3','')
+
+def add_count_dict(dict_, elm):
+    if elm not in dict_.keys():
+        dict_[elm]=0
+    dict_[elm]+=1
     
+def append_set_dict(dict_, key,elm,):
+    if key not in dict_.keys():
+        dict_[key]=[]
+    if elm not in dict_[key]:
+        dict_[key].append(elm)

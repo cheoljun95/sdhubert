@@ -6,5 +6,10 @@ km_models
 outputs
 */_deprecated
 ckpts*
+mincut/build
+mincut/mincut.c
+mincut/mincut.cpython*
+km/
+results/
 debugging_notebooks
 

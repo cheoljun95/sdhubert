@@ -173,6 +173,7 @@ class SDHuBERT(nn.Module):
         hidden_states =[self.cls_token[None,None,:].repeat(batch_size,1,1), hidden_states,]
         hidden_states = torch.cat(hidden_states, 1)
         
+        hidden_states_all = [hidden_states]
         batch_size, sequence_length, _ = hidden_states.shape
 
         for li,layer in enumerate(self.speech_model.encoder.layers):
@@ -184,6 +185,7 @@ class SDHuBERT(nn.Module):
                         hidden_states, attention_mask=attention_mask, output_attentions=False
                     )
                 hidden_states = layer_outputs[0]
+                hidden_states_all.append(hidden_states)
 
         student_states = hidden_states
         student_cls_token = self.final_lin(self.final_proj(student_states[:,0]))
@@ -219,6 +221,7 @@ class SDHuBERT(nn.Module):
             distill_loss = None
             
         outputs = {'states': student_states,
+                   'hidden_states': hidden_states_all,
                    'cls': student_cls_token,
                    'distill_loss': distill_loss,}
 

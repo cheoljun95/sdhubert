@@ -1,0 +1,11 @@
+soundfile
+scipy
+matplotlib
+sklearn
+librosa
+fastapi[all]==0.103.0
+lightning==2.1.2
+hydra-core
+tensorboardX
+transformers
+tqdm
