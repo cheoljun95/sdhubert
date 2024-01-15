@@ -16,7 +16,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     save_name = args.save_name if args.save_name is not None else Path(args.ckpt_path).stem
     segmenter = SDHuBERTSegmenter(args.ckpt_path, layer=9, normcut_layer=11, normcut_threshold=2, device=args.device)
-    mincut = MincutWrapper(syl_dur=0.2, ft_sr=50) #, min_segment_len=5, pre_merge=False, min_cut_minimum=5)
+    mincut = MincutWrapper(syl_dur=0.2, ft_sr=50)
     librispeech_dataroot = Path(args.librispeech_dataroot)
     save_dir = args.save_dir if args.save_dir is not None else librispeech_dataroot/'segments'
     save_dir.mkdir(exist_ok=True)

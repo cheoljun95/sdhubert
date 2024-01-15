@@ -3,7 +3,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from lightning import LightningModule
+try:
+    from lightning import LightningModule
+except:
+    lightning = None
 from transformers import HubertModel
 from .ema_module import EMAModule
 from utils.specaugment import stretch, compute_mask_indices
