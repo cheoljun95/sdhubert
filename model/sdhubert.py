@@ -45,8 +45,8 @@ class SDHuBERT(nn.Module):
 
         self.reinit_layers = reinit_layers
         self.enc_dim = self.speech_model.config.hidden_size
-        self.cls_token = nn.Parameter(torch.Tensor(self.enc_dim))
-        self.masked_spec_embed = nn.Parameter(torch.Tensor(self.enc_dim))
+        self.cls_token = nn.Parameter(torch.Tensor(self.enc_dim), requires_grad=True)
+        self.masked_spec_embed = nn.Parameter(torch.Tensor(self.enc_dim), requires_grad=True)
         self.temp_s = nn.parameter.Parameter(torch.ones(1)*0.2,requires_grad=False)
         self.temp_t = nn.parameter.Parameter(torch.ones(1)*0.05,requires_grad=False)
         self.center = nn.Parameter(torch.Tensor(final_dim),requires_grad=False)
