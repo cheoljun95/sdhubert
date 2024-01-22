@@ -21,7 +21,7 @@ python setup.py build_ext --inplace
 
 ## Apply SD-HuBERT to get syllabic tokens
 
-Download [the pretrained model] (https://drive.google.com/file/d/1u2jTdAck8qD6ZEb5bqHfvUNsN-9DgGfg/view?usp=drive_link) and put under the `ckpts/`. The following code will provide segment boundaries and the pooled feature per segment.
+Download [the pretrained model](https://drive.google.com/file/d/1u2jTdAck8qD6ZEb5bqHfvUNsN-9DgGfg/view?usp=drive_link) and put under the `ckpts/`. The following code will provide segment boundaries and the pooled feature per segment.
 
 ```python
 from model.segmenter import SDHuBERTSegmenter, MincutWrapper
