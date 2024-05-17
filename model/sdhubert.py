@@ -6,8 +6,8 @@ import torch.nn.functional as F
 try:
     from lightning import LightningModule
 except:
-    lightning = None
-from transformers import HubertModel
+    LightningModule = object
+from transformers import HubertModel, WavLMModel
 from .ema_module import EMAModule
 from utils.specaugment import stretch, compute_mask_indices
 
@@ -32,6 +32,9 @@ class SDHuBERT(nn.Module):
                  **kwargs,
                 ):
         super().__init__()
+        #if 'wavlm' in speech_upstream:
+        #    self.speech_model = WavLMModel.from_pretrained(speech_upstream)
+        #else:
         self.speech_model = HubertModel.from_pretrained(speech_upstream)
         for l in reinit_layers:
             layer = self.speech_model.encoder.layers[l]
@@ -146,6 +149,8 @@ class SDHuBERT(nn.Module):
         extract_features = self.speech_model.feature_extractor(wav)
         extract_features = extract_features.transpose(1, 2)
         hidden_states = self.speech_model.feature_projection(extract_features)
+        #if isinstance(hidden_states, tuple):
+            #hidden_states=hidden_states[0]
         teacher_hidden_states = hidden_states.detach().clone()
         
         if wavlen is not None:
@@ -282,5 +287,4 @@ class SDHuBERTTrainer(LightningModule):
         opt_fun = torch.optim.AdamW
         opt = opt_fun(self.net.parameters(),lr=self.lr)
         sch = torch.optim.lr_scheduler.CosineAnnealingLR(opt,eta_min=self.lr*self.gamma,T_max=self.T_max)
-        #return [opt], [{"scheduler": sch, "interval": "step"}]
         return {"optimizer":opt, "scheduler":sch, "interval": "step"}

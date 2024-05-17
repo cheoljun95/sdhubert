@@ -3,23 +3,27 @@ import torch
 import yaml
 from pathlib import Path
 from model.sdhubert import SDHuBERT
+from model.sdwavlm import SDHuBERT as SDWavLM
+from collections import OrderedDict
 
-def load_model(ckpt_path, **kwargs):
+def load_model(ckpt_path, load_wavlm=False, **kwargs):
     try:
         ckpt = torch.load(ckpt_path)
         cfg = ckpt['config']
         state_dict = ckpt['state_dict']
     except:
-        cfg, ckpt_path = load_cfg_and_ckpt_path(version_dir=ckpt_path,**kwrags)
+        cfg, ckpt_path = load_cfg_and_ckpt_path(version_dir=ckpt_path,**kwargs)
         ckpt = torch.load(ckpt_path)
         cfg = cfg['model']
         state_dict = OrderedDict()
-        for module_name, state in state_dict.items():
+        for module_name, state in ckpt['state_dict'].items():
             if f'net.' in module_name:
                 new_name = module_name.split(f'net.')[-1]
                 state_dict[new_name] = state
-        
-    model = SDHuBERT(**cfg)
+    if load_wavlm:
+        model = SDWavLM(**cfg)
+    else:
+        model = SDHuBERT(**cfg)
     model.load_state_dict(state_dict, strict=False)
     model = model.eval()
 
