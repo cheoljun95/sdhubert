@@ -318,7 +318,7 @@ class MincutWrapper(object):
             feat, seg_boundary_frame_pairs = self._merge(feat, seg_boundary_frame_pairs)
         return feat, seg_boundary_frame_pairs
 
-    def process(self, segments, features,  **kwargs):
+    def process(self, segments, features, output_in_second=True, **kwargs):
         
         boundaries = []
         pooled_feat = []
@@ -346,7 +346,8 @@ class MincutWrapper(object):
         else:
             pooled_feat =np.zeros((0,768))
             boundaries = np.zeros((0,2))
-            
+        if output_in_second:
+            boundaries = boundaries/self.ft_sr
         outputs = {
             "segments": boundaries,
             "features": features,
@@ -355,15 +356,15 @@ class MincutWrapper(object):
         }
         return outputs
     
-    def __call__(self, input_dict=None, segments=None, features=None, **kwargs):
+    def __call__(self, input_dict=None, segments=None, features=None, output_in_second=True, **kwargs):
         if input_dict is not None:
             # in the case the dictionary outputs from the SD-HuBERT are given
             if isinstance(input_dict, list):
                 # given as a list of dictionary
-                return [self.process(**d) for d in input_dict]
+                return [self.process(**d,output_in_second=output_in_second) for d in input_dict]
             else:
-                return self.process(**input_dict)
+                return self.process(**input_dict, output_in_second=output_in_second)
         else:
             assert segments is not None, "Segments should be input!"
             assert features is not None, "Features should be input!"
-            return self.process(segments, features)
+            return self.process(segments, features, output_in_second=output_in_second)
