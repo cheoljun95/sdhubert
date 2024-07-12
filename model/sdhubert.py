@@ -7,7 +7,7 @@ try:
     from lightning import LightningModule
 except:
     LightningModule = object
-from transformers import HubertModel, WavLMModel
+from transformers import HubertModel
 from .ema_module import EMAModule
 from utils.specaugment import stretch, compute_mask_indices
 

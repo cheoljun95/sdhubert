@@ -4,6 +4,15 @@ This is the official code base for [SD-HuBERT: Sentence-Level Self-Distillation 
 
 ![SD-HuBERT](figures/main_figure.jpg)
 
+## Updates
+
+### 07112025
+1. Fixed some bugs.
+2. Added a heuristic silence filter that filters out segments with average wave amplitutes lower than 0.05. (wave form is z-scored.)
+3. The input wave forms are chunked by 5 seconds with 500ms overlapping, before being fed into SD-HuBERT. The outputs are overlapped-and-added to have a full-length feature. The reason for this is a) for a faster inference and b) the model is trained with 5 second samples.
+4. The script offers a batched inference. (still, the Mincut part is applied one by one.)
+
+
 ## Environment
 
 1. We recommend to set up a conda environment. We trained/tested the model on Python 3.9.
@@ -28,11 +37,16 @@ from model.segmenter import SDHuBERTSegmenter, MincutWrapper
 
 device = "cuda:0"
 ckpt_path = "ckpts/sdhubert_base.pt" # or your own path
-segmenter = SDHuBERTSegmenter(ckpt_path, layer=9, normcut_layer=11, normcut_threshold=2, device=device)
-mincut = MincutWrapper(syl_dur=0.2, ft_sr=50) 
+segmenter = SDHuBERTSegmenter(ckpt_path, layer=9, normcut_strategy="relative",
+                              normcut_threshold=0.1, silence_threshold=0.05,
+                              device=device)
 
-wav_file = WAV_FILE
-outputs = mincut(**segmenter(wav_file))
+## syl_dur: asymptotic length of syllable in second. so the below syl_dur=0.1 means it woul have inital 100ms-long syllables.
+## merge_threshold: when the similarity of the features of adjacent syllables are above this threshold, they are merged.
+mincut = MincutWrapper(syl_dur=0.1, merge_threshold=0.4, ft_sr=50) 
+
+wav_file = "samples/sample.flac"
+outputs = mincut(segmenter(wav_file))
 ```
 
 The output has following format.
@@ -40,8 +54,15 @@ The output has following format.
 {'segments': array of boundaries,
  'features': original feature of frames,
  'segment_features': average feature per segment,
+ 'length': length of frames (in 50hz),
  }
 ```
+The pipeline can handle multiple audio files at once. For that use case, input a list of wave files as `wav_file` and then the outputs should be also the list of individual outputs.
+
+Please check an example jupyter notebook. `exmample.ipynb` 
+
+
+
 
 To get unit category, you can apply pretrained clustering model as follows. Please download the assets ([km](https://drive.google.com/file/d/14zdEttya2X8PdjDMUt4lyHWOOY2OS3Zr/view?usp=drive_link) and [reducer](https://drive.google.com/file/d/19XisepDAfULOKFY147RDYT5UAk2ZnCr-/view?usp=drive_link)) and place under `km/`.
 
