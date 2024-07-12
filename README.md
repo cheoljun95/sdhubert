@@ -38,7 +38,7 @@ from model.segmenter import SDHuBERTSegmenter, MincutWrapper
 device = "cuda:0"
 ckpt_path = "ckpts/sdhubert_base.pt" # or your own path
 segmenter = SDHuBERTSegmenter(ckpt_path, layer=9, normcut_strategy="relative",
-                              normcut_threshold=0.1, silence_threshold=0.05,
+                              normcut_threshold=0.1, silence_threshold=0.02,
                               device=device)
 
 ## syl_dur: asymptotic length of syllable in second. so the below syl_dur=0.1 means it woul have inital 100ms-long syllables.

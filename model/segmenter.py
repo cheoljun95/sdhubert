@@ -16,7 +16,7 @@ class SDHuBERTSegmenter(nn.Module):
         normcut_layer=10,
         normcut_strategy="relative",
         normcut_threshold=0.1,
-        silence_threshold=0.05,
+        silence_threshold=0.02,
         device="cuda",
         min_segment_len=2,
         zero_pad=1280,
