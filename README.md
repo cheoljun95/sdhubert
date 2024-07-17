@@ -6,6 +6,9 @@ This is the official code base for [SD-HuBERT: Sentence-Level Self-Distillation 
 
 ## Updates
 
+### 07172025
+1. Add a script that can process from an input directory and save to a designated output directory. Check the instruction in the [Extract segments session](###Extract-segments).
+
 ### 07112025
 1. Fixed some bugs.
 2. Added a heuristic silence filter that filters out segments with average wave amplitutes lower than 0.05. (wave form is z-scored.)
@@ -79,6 +82,29 @@ reducer = np.load(reducer_path)
 units = [reducer[km_model.predict(segment_feature)] for segment_feature in outputs['segment_features']]
 ```
 
+### Extract segments
+
+To extract segments from audio files, please run the following command with your own input and output directory.
+
+```
+python segment.py --input_dir=INPUT_DIR --output_dir=OUTPUT_DIR
+```
+
+The audio files in a specified directory `INPUT_DIR` will be processed. Currently, the script only works on one of `wav`, `flac`, and `ogg` formats.
+The results will be saved in `OUTPUT_DIR` with following format for each `AUDIO_FILE_NAME.wav`.
+
+```
+AUDIO_FILE_NAME_segments.txt # A comma separated start end end of each syllable segment in second.
+AUDIO_FILE_NAME_feature.npy  # A feature per 20ms frame before segmented, having (Length of audio frames, 768) size.
+AUDIO_FILE_NAME_segmentfeature.npy # Segment-averaged featue after segmentation, having (Number of segments, 768) size.
+```
+
+Please check some other configurations (e.g., path to a model checkpoint) by the following command.
+```
+python segment.py --help
+```
+
+
 ## Training SD-HuBERT
 
 First, download the [LibriSpeech](https://www.openslr.org/12) data under some data directory, let's say `LIBRISPEECH_ROOT`. The directory should look like 
@@ -109,12 +135,14 @@ python export_model.py --ckpt_path=outputs/DATE/TIME/NAME
 
 Please run through the following commands to extract segments and evaluate syllable boundary detection, purity, and SSABX task. Also, please check the arguments in the scripts to get full control of experiment.
 
-### Extract segments
+### Extract segments for LibriSpeech
 
 ```
-python extract_segments.py --ckpt_path={CKPT: e.g., ckpts/sdhubert_base.pt} --librispeech_dataroot=LIBRISPEECH_ROOT
+python extract_librispeech_segments.py --ckpt_path={CKPT: e.g., ckpts/sdhubert_base.pt} --librispeech_dataroot=LIBRISPEECH_ROOT
 ```
 This will extract segments under `SEGMENT_PATH=LIBRISPEECH_ROOT/segments/NAME`. The `NAME` is `sdhubert_base` by default.
+
+
 
 ### Evaluate syllable boundary detection
 
