@@ -7,7 +7,7 @@ This is the official code base for [SD-HuBERT: Sentence-Level Self-Distillation 
 ## Updates
 
 ### 07172025
-1. Add a script that can process from an input directory and save to a designated output directory. Check the instruction in the [Extract segments session](###Extract-segments).
+1. Add a script that can process from an input directory and save to a designated output directory. Check the instruction in the [Extract segments](#extract-segments).
 
 ### 07112025
 1. Fixed some bugs.
