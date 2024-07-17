@@ -94,9 +94,9 @@ The audio files in a specified directory `INPUT_DIR` will be processed. Currentl
 The results will be saved in `OUTPUT_DIR` with following format for each `AUDIO_FILE_NAME.wav`.
 
 ```
-AUDIO_FILE_NAME_segments.txt # A comma separated start end end of each syllable segment in second.
-AUDIO_FILE_NAME_feature.npy  # A feature per 20ms frame before segmented, having (Length of audio frames, 768) size.
-AUDIO_FILE_NAME_segmentfeature.npy # Segment-averaged featue after segmentation, having (Number of segments, 768) size.
+AUDIO_FILE_NAME_segments.txt # Each line has a comma separated start end end of each syllable segment in second.
+AUDIO_FILE_NAME_feature.npy  # An array of features in 50 hz frame before segmented, resulting (Length of audio frames, 768) array.
+AUDIO_FILE_NAME_segmentfeature.npy # An array of segment-averaged featues after segmentation, resulting (Number of segments, 768) array.
 ```
 
 Please check some other configurations (e.g., path to a model checkpoint) by the following command.
