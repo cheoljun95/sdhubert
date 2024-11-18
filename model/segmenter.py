@@ -13,7 +13,7 @@ class SDHuBERTSegmenter(nn.Module):
         self,
         ckpt_path,
         layer=9,
-        normcut_layer=10,
+        normcut_layer=11,
         normcut_strategy="relative",
         normcut_threshold=0.1,
         silence_threshold=0.02,
