@@ -21,6 +21,7 @@ class SDHuBERTSegmenter(nn.Module):
         min_segment_len=2,
         zero_pad=1280,
         max_batch_size=50,
+        chunk_len=999,
         **kwargs,
     ):
         super().__init__()
@@ -43,7 +44,7 @@ class SDHuBERTSegmenter(nn.Module):
         
         ### hard-coded config
         self.wav_sr = 16000
-        self.chunk_len = 5
+        self.chunk_len = chunk_len
         self.ft_sr = 50
         self.wav_ft_sr = self.wav_sr//self.ft_sr
         self.buffer_pad = self.wav_ft_sr//2
