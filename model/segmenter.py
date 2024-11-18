@@ -21,7 +21,7 @@ class SDHuBERTSegmenter(nn.Module):
         min_segment_len=2,
         zero_pad=1280,
         max_batch_size=50,
-        chunk_len=999,
+        chunk_len=99999,
         **kwargs,
     ):
         super().__init__()
