@@ -107,9 +107,9 @@ class SDHuBERT(nn.Module):
                 ema_decay=self.ema_decay,
             )
         else:
-            self.ema.step(self)
-            self.ema_final.step(self)
-            self.ema_finallin.step(self)
+            self.ema.step(self.speech_model.encoder.layers)
+            self.ema_final.step(self.final_proj)
+            self.ema_finallin.step(self.final_lin)
             
     def _perturb_batch(self, x, attention=None):
         
