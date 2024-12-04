@@ -13,15 +13,13 @@ class SDHuBERTSegmenter(nn.Module):
         self,
         ckpt_path,
         layer=9,
-        normcut_layer=11,
+        normcut_layer=10,
         normcut_strategy="relative",
         normcut_threshold=0.1,
         silence_threshold=0.02,
         device="cuda",
         min_segment_len=2,
-        zero_pad=1280,
-        max_batch_size=50,
-        chunk_len=99999,
+        zero_pad=0,
         **kwargs,
     ):
         super().__init__()
@@ -40,69 +38,33 @@ class SDHuBERTSegmenter(nn.Module):
         self.zero_pad = zero_pad
         self.normcut_strategy = normcut_strategy
         assert normcut_strategy in ["absolute", "relative"]
-        self.max_batch_size = max_batch_size
         
         ### hard-coded config
         self.wav_sr = 16000
-        self.chunk_len = chunk_len
         self.ft_sr = 50
         self.wav_ft_sr = self.wav_sr//self.ft_sr
         self.buffer_pad = self.wav_ft_sr//2
 
 
     def preprocess_wav(self, wav_paths):
-        batch_wavs = []
         lengths = []
-        overlap_size = self.wav_sr//2
-        chunk_size = self.wav_sr*self.chunk_len
-        buffer_pad = self.buffer_pad
-        wav_indices= []
-        original_lengths = []
-        starts=[]
-        wi = 0
+        wavs = []
         for wav_path in wav_paths:
             wav, sr = sf.read(wav_path)
             if len(wav.shape)==2:
                 wav = wav[...,0]
             if sr != self.wav_sr:
                 wav = librosa.resample(wav, orig_sr=sr, target_sr=self.wav_sr)
-            
+                
             if len(wav)<self.wav_sr*0.1:
                 print(f"WARNING:{str(wav_path)} has too short length {len(wav)/self.wav_sr:.02f}") 
                 continue
             wav = (wav-wav.mean())/wav.std()
+            lengths.append(len(wav))
             if self.zero_pad >0:
-                wav = np.concatenate([np.zeros(self.zero_pad),wav, np.zeros(self.zero_pad)])
-
-            start = 0 
-            wav_chunks = []
-            while True:
-                wav_chunk = wav[start:start+chunk_size]
-                if len(wav_chunk)>=320:
-                    lengths.append(len(wav_chunk))
-                    if len(wav_chunk)>=chunk_size//2 or len(wav_chunks)==0:
-                        wav_chunks.append(wav_chunk)
-                        if (start+chunk_size)>len(wav):
-                            starts.append(0)
-                            break
-                        start = start+chunk_size-overlap_size
-                        starts.append(0)
-                    else:
-                        #wav_chunks[-1] = np.concatenate([wav_chunks[-1],wav_chunk[overlap_size:]])
-                        if len(wav_chunk) >= self.wav_ft_sr:
-                            wav_chunk = wav[-chunk_size:]
-                            wav_chunks.append(wav_chunk)
-                            starts.append(start-(len(wav)-chunk_size))
-                        break
-                else:
-                    break
-            wav_chunks = [np.concatenate([np.zeros(buffer_pad),wav_chunk, np.zeros(buffer_pad)]) for 
-                          wav_chunk in wav_chunks]
-            original_lengths+=[len(wav)]
-            batch_wavs+=wav_chunks
-            wav_indices+=[wi]*len(wav_chunks)
-            wi+=1 
-        return batch_wavs, lengths, wav_indices,  original_lengths, starts
+                wav = np.concatenate([np.zeros(self.buffer_pad),wav, np.zeros(self.buffer_pad)])
+            wavs.append(wav)
+        return wavs, lengths
         
 
     def mask_to_segment(self, mask):
@@ -138,65 +100,28 @@ class SDHuBERTSegmenter(nn.Module):
         else:
             single_input = False
             
-        wavs, lengths, wav_indices, original_lengths,starts = self.preprocess_wav(wav_paths)
+        wavs, lengths = self.preprocess_wav(wav_paths)
 
         wavs =  nn.utils.rnn.pad_sequence([torch.from_numpy(wav).float() for wav in wavs], batch_first=True, padding_value=0.0)
         #inputs = inputs.input_values.to(self.device)
         inputs = wavs.to(self.device)
-        wavlen = (np.array(lengths)+np.array(starts))/self.wav_sr
-        total_b = inputs.shape[0]
-        start_b = 0
+        wavlen = np.array(lengths)/self.wav_sr
         features = []
         norm_features = []
-        while start_b<total_b:
-            with torch.no_grad():
-                outputs = self.model(inputs[start_b:start_b+self.max_batch_size],
-                                     wavlen=wavlen[start_b:start_b+self.max_batch_size],
-                                     inference_mode=True)
-                hidden_states = outputs["hidden_states"]
-                features.append(hidden_states[self.layer][:,1:])
-                norm_features.append(hidden_states[self.normcut_layer][:,1:])
-                start_b += self.max_batch_size
-        features = torch.cat(features, 0)
-        norm_features = torch.cat(norm_features, 0)
-                
-        features_by_wav = [[] for _ in range(len(wav_paths))]
-        norm_features_by_wav = [[] for _ in range(len(wav_paths))]
-        for wi, ft, nft, l,s in zip(wav_indices, features,norm_features,lengths,starts):
-            assert len(ft.shape)==2
-            features_by_wav[wi].append(ft[s//320:s//320+l//320])
-            norm_features_by_wav[wi].append(nft[s//320:s//320+l//320])
-        
-        def merge_chunks(chunk_fts, overlap_size=25,diminish_size=5):
-            if len(chunk_fts)==0:
-                return None
-            right_factor = (torch.arange(overlap_size,
-                           device=chunk_fts[0].device)/
-                           diminish_size).clip(0,1.0)[:,None]
-            left_factor = torch.flip((torch.arange(overlap_size,
-                                      device=chunk_fts[0].device)/
-                                       diminish_size).clip(0,1.0),dims=[0])[:,None]
-            
-            merged = None
-            for chunk_ft in chunk_fts:
-                if merged is None:
-                    merged = chunk_ft
-                else:
-                    merged[-overlap_size:]=(
-                        left_factor*merged[-overlap_size:]+
-                        right_factor*chunk_ft[:overlap_size])/(left_factor+right_factor)
-                    merged = torch.cat([merged, chunk_ft[overlap_size:]])
-            return merged
-            
-        features = [merge_chunks(chunk_fts,overlap_size=25) for chunk_fts in features_by_wav]
-        norm_features = [merge_chunks(chunk_fts,overlap_size=25) for chunk_fts in norm_features_by_wav]
+        with torch.no_grad():
+            outputs = self.model(inputs,
+                                 wavlen=wavlen,
+                                 inference_mode=True)
+            hidden_states = outputs["hidden_states"]
+            features=hidden_states[self.layer][:,1:]
+            norm_features=hidden_states[self.normcut_layer][:,1:]
         
         results = [] 
 
         
         for idx in range(len(wav_paths)):
-            states = features[idx][: original_lengths[idx]//320].cpu().numpy()
-            norm = norm_features[idx][: original_lengths[idx]//320] #.cpu().numpy()
+            states = features[idx][: lengths[idx]//320].cpu().numpy()
+            norm = norm_features[idx][: lengths[idx]//320] #.cpu().numpy()
             #norm = np.linalg.norm(norm, axis=1)
             norm =torch.linalg.vector_norm(norm, ord=2, dim=-1).cpu().numpy()
             if self.normcut_strategy == "relative":
